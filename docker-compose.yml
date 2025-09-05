@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  # ---------- База данных ----------
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: marketplace
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # ---------- Кеш и брокер ----------
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI (доступ через браузер)
+
+  auth_service:
+    build: ./services/auth_service
+    container_name: auth_service
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - POSTGRES_DB=marketplace
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=dev
+      - POSTGRES_HOST=postgres
+      - SECRET_KEY=super-secret-key-for-dev
+    ports:
+      - "8000:8000"    
+
+volumes:
+  pg_data:
