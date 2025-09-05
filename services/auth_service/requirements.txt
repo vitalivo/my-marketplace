@@ -3,3 +3,5 @@ djangorestframework==3.14
 djangorestframework-simplejwt==5.3
 psycopg2-binary==2.9.9
 gunicorn==21.2
+drf-spectacular==0.27   # для Swagger / Redoc
+Pillow==10.3.0           # нужен для ImageField
