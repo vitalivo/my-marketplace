@@ -12,6 +12,8 @@ class HealthView(APIView):
     Самый простой «ping»‑эндпоинт.
     Возвращает JSON {"status":"ok"} и статус 200.
     """
+    permission_classes = [permissions.AllowAny]
+    
     def get(self, request, *args, **kwargs):
         return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
