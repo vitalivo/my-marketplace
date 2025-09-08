@@ -39,3 +39,13 @@ docker compose -f docker-compose.prod.yml up -d
 # Применяем миграции (один раз)
 docker compose -f docker-compose.prod.yml exec auth_service python manage.py migrate
 docker compose -f docker-compose.prod.yml exec marketplace_service python manage.py migrate
+
+## Payment Service
+
+Сервис отвечает за создание Stripe Checkout‑сессий и хранение информации о платежах.
+
+### Запуск (dev)
+
+```bash
+docker compose up -d payment_service
+docker compose exec payment_service python manage.py migrate

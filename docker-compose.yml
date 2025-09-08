@@ -25,7 +25,22 @@ services:
       - postgres
       - redis
     mem_limit: 768m          # максимум 768 MiB
-    cpus: 0.7                # 70 % одного ядра
+    cpus: 0.7  
+    
+  payment_service:
+    build: ./services/payment_service
+    ports:
+      - "8002:8000"                # внешний порт 8002 → внутренний 8000
+    environment:
+      - DJANGO_SETTINGS_MODULE=payment_service.settings
+      - DJANGO_DEBUG=False
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-sk_test_123}
+    command: gunicorn payment_service.wsgi:application --bind 0.0.0.0:8000
+    depends_on:
+      - postgres
+      - redis
+    mem_limit: 512m
+    cpus: 0.5                # 70 % одного ядра
 
   postgres:
     image: postgis/postgis:15-3.3
