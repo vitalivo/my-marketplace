@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security & debug
 # ----------------------------------------------------------------------
 SECRET_KEY = os.getenv('SECRET_KEY', 'super-secret-key-for-dev')
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['*']
 
 # ----------------------------------------------------------------------

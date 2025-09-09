@@ -2,72 +2,70 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [ main ]
   pull_request:
-    branches: [main, master]
+    branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
+    # 1️⃣ Переменные, доступные всем шагам job’а
+    env:
+      DJANGO_SETTINGS_MODULE: payment_service.settings
+      DJANGO_DEBUG: "False"                     # выключаем debug в CI
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}      # ваш секретный ключ (GitHub‑Secret)
+      STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}   # тестовый Stripe‑ключ (GitHub‑Secret)
+
     services:
+      # 2️⃣ PostgreSQL‑служба, которую будет использовать ваш сервис
       postgres:
-        image: postgis/postgis:15-3.3
+        image: postgres:15
         env:
           POSTGRES_DB: marketplace
           POSTGRES_USER: dev
           POSTGRES_PASSWORD: dev
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports: [5432:5432]
+        ports: [ "5432:5432" ]
         options: >-
-          --health-cmd "pg_isready -U dev"
+          --health-cmd "pg_isready -U dev -d marketplace"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
-      redis:
-        image: redis:7-alpine
-        ports: [6379:6379]
-
     steps:
-      - uses: actions/checkout@v4
+      # 3️⃣ Клонируем репозиторий
+      - uses: actions/checkout@v3
 
-      - name: Set up Python
+      # 4️⃣ Устанавливаем Python (не обязателен, но полезен для lint‑ов)
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies (auth_service)
+      # 5️⃣ Устанавливаем Docker‑Compose (в Ubuntu‑image он не предустановлен)
+      - name: Install Docker Compose
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r services/auth_service/requirements.txt
-          pip install pytest pytest-django
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
 
-      - name: Install dependencies (marketplace_service)
-        run: |
-          source venv/bin/activate
-          pip install -r services/marketplace_service/requirements.txt
+      # 6️⃣ Сборка образов (использует переменные из `env` выше)
+      - name: Build Docker images
+        run: docker compose build
 
-      - name: Run tests (auth_service)
-        env:
-          DJANGO_SETTINGS_MODULE: auth_service.settings
-          POSTGRES_DB: marketplace
-          POSTGRES_USER: dev
-          POSTGRES_PASSWORD: dev
-          POSTGRES_HOST: localhost
-        run: |
-          source venv/bin/activate
-          pytest services/auth_service/tests
+      # 7️⃣ Поднимаем контейнеры в фоне
+      - name: Start containers
+        run: docker compose up -d
 
-      - name: Run tests (marketplace_service)
-        env:
-          DJANGO_SETTINGS_MODULE: marketplace.settings
-          POSTGRES_DB: marketplace
-          POSTGRES_USER: dev
-          POSTGRES_PASSWORD: dev
-          POSTGRES_HOST: localhost
+      # 8️⃣ Ждём, пока база данных станет готовой
+      - name: Wait for DB to be ready
         run: |
-          source venv/bin/activate
-          pytest services/marketplace_service/tests
+          # Попытки подключиться к Django, чтобы убедиться, что PostgreSQL уже доступен
+          for i in {1..15}; do
+            docker compose exec payment_service python -c "import django; django.setup()" && break
+            echo "Waiting for DB… ($i)"
+            sleep 2
+          done
+
+      # 9️⃣ Запускаем тесты через pytest‑django
+      - name: Run tests
+        run: docker compose exec payment_service pytest

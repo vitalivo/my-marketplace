@@ -49,3 +49,20 @@ docker compose -f docker-compose.prod.yml exec marketplace_service python manage
 ```bash
 docker compose up -d payment_service
 docker compose exec payment_service python manage.py migrate
+
+
+## Платёжный сервис (payment_service)
+
+### Получить JWT‑токен
+
+```bash
+TOKEN=$(curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"testpass"}' \
+  http://localhost:8000/api/token/ | jq -r .access)
+
+echo $TOKEN   # → eyJ...
+Создать платёж
+curl -X POST http://localhost:8002/api/payments/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":12.50,"currency":"usd","success_url":"https://example.com/success/","cancel_url":"https://example.com/cancel/"}' | jq

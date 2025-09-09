@@ -31,6 +31,20 @@ services:
       - postgres
       - redis
 
+  payment_service:
+    build: ./services/payment_service
+    ports:
+      - "8002:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=payment_service.settings
+      - DJANGO_DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+    command: gunicorn payment_service.wsgi:application --bind 0.0.0.0:8000
+    depends_on:
+      - postgres
+      - redis    
+
   postgres:
     image: postgis/postgis:15-3.3
     environment:
