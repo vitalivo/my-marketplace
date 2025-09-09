@@ -5,7 +5,7 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'super-secret-dev-key')
-DEBUG = False
+DEBUG = os.getenv('DJANGO_DEBUG', '') == 'True'
 ALLOWED_HOSTS = ['*']
 
 # -------------------------------------------------
@@ -73,7 +73,7 @@ DATABASES = {
         'USER': os.getenv('POSTGRES_USER', 'dev'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'dev'),
         'HOST': os.getenv('POSTGRES_HOST', 'postgres'),      # имя сервиса в docker‑compose
-        'PORT': 5432,
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
 

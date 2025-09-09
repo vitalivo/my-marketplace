@@ -16,7 +16,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security & debug
 # ----------------------------------------------------------------------
 SECRET_KEY = os.getenv('SECRET_KEY', 'super-secret-key-for-dev')
-DEBUG = False
+
+DEBUG = os.getenv('DJANGO_DEBUG', '') == 'True'
+
 ALLOWED_HOSTS = ['*']
 
 # ----------------------------------------------------------------------
@@ -79,7 +81,7 @@ DATABASES = {
         'USER': os.getenv('POSTGRES_USER', 'dev'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'dev'),
         'HOST': os.getenv('POSTGRES_HOST', 'postgres'),  # имя сервиса из docker‑compose
-        'PORT': 5432,
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
 

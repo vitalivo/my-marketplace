@@ -1,30 +1,32 @@
-# ---- Base image ----
-FROM python:3.11-slim
+# --------------------------------------------------------------
+#  Dockerfile –  python 3.13 slim + все dev‑зависимости
+# --------------------------------------------------------------
+FROM python:3.13-slim
 
-# ---- Install system build deps (only for psycopg2) ----
-#   - libpq-dev   → pg_config (PostgreSQL client headers)
-#   - gcc, python3-dev → компилятор для C‑расширений
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
+# ---------- Системные зависимости ----------
+#   build-essential  → gcc + libc6-dev (нужен assert.h и др.)
+#   python3.13-dev   → заголовки CPython 3.13 (Python.h, _PyInterpreterState_Get)
+#   libpq-dev        → заголовки PostgreSQL (для psycopg2)
+#   libffi-dev       → требуется cffi/psycopg2
+#   libssl-dev       → иногда требуется для cryptography‑зависимостей
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        python3.13-dev \
+        libpq-dev \
+        libffi-dev \
+        libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# ---- Environment ----
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# ---- Working directory ----
+# ---------- Рабочая директория ----------
 WORKDIR /app
 
-# ---- Install python deps ----
-COPY requirements.txt .
+# ---------- entrypoint ----------
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# ---------- Копируем код проекта ----------
+COPY . /app
+
+# ---------- Python‑зависимости ----------
+#   --no-cache-dir – не сохраняем промежуточный кэш в образ
 RUN pip install --no-cache-dir -r requirements.txt
-
-# ---- Clean up build‑time deps (optional, makes image smaller) ----
-RUN apt-get purge -y --auto-remove gcc libpq-dev && \
-    rm -rf /root/.cache/pip
-
-# ---- Copy project source ----
-COPY . .
-
-# ---- Run server ----
-CMD ["gunicorn", "auth_service.wsgi:application", "--bind", "0.0.0.0:8000"]

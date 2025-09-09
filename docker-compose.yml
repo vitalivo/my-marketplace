@@ -1,50 +1,62 @@
+
 services:
   auth_service:
     build: ./services/auth_service
-    ports:
-      - "8000:8000"
+    ports: ["8000:8000"]
+    env_file: .env                     # <‑‑ читаем переменные из .env
     environment:
       - DJANGO_SETTINGS_MODULE=auth_service.settings
       - DJANGO_DEBUG=False
-      - SECRET_KEY=${SECRET_KEY}               # ← добавляем
-      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - POSTGRES_DB=marketplace
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=dev
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
     command: gunicorn auth_service.wsgi:application --bind 0.0.0.0:8000
-    depends_on:
-      - postgres
-      - redis
-
-  payment_service:
-    build: ./services/payment_service
-    ports:
-      - "8002:8000"
-    environment:
-      - DJANGO_SETTINGS_MODULE=payment_service.settings
-      - DJANGO_DEBUG=False
-      - SECRET_KEY=${SECRET_KEY}               # ← добавляем
-      - STRIPE_API_KEY=${STRIPE_API_KEY}
-    command: gunicorn payment_service.wsgi:application --bind 0.0.0.0:8000
-    depends_on:
-      - postgres
-      - redis
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    depends_on: [postgres, redis]
 
   marketplace_service:
     build: ./services/marketplace_service
-    ports:
-      - "8001:8000"
+    ports: ["8001:8000"]
+    env_file: .env
     environment:
       - DJANGO_SETTINGS_MODULE=marketplace.settings
-    command: python /app/manage.py runserver 0.0.0.0:8000
-    depends_on:
-      - postgres
-      - redis
-    mem_limit: 768m          # максимум 768 MiB
-    cpus: 0.7  
+      - DJANGO_DEBUG=False
+      - POSTGRES_DB=marketplace
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=dev
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432 
+    command: gunicorn marketplace.wsgi:application --bind 0.0.0.0:8000
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 0.7
+    depends_on: [postgres, redis]
 
+  payment_service:
+    build: ./services/payment_service
+    ports: ["8002:8000"]
+    env_file: .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=payment_service.settings
+      - DJANGO_DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - POSTGRES_DB=marketplace
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=dev
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    command: gunicorn payment_service.wsgi:application --bind 0.0.0.0:8000
+    restart: unless-stopped
+    depends_on: [postgres, redis]
 
   postgres:
     image: postgis/postgis:15-3.3
-    ports:
-      - "5432:5432"
+    ports: ["5432:5432"]
     environment:
       POSTGRES_DB: marketplace
       POSTGRES_USER: dev
@@ -52,11 +64,12 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    ports: ["6379:6379"]
+    restart: unless-stopped
 
 volumes:
   pgdata:
