@@ -54,6 +54,24 @@ services:
     restart: unless-stopped
     depends_on: [postgres, redis]
 
+  notification_service:
+      build: ./services/notification_service
+      ports: ["8003:8003"]          # любой свободный порт на хосте
+      env_file: .env                # тот же .env, что и у остальных сервисов
+      environment:
+        - DJANGO_SETTINGS_MODULE=notification_service.settings
+        - DJANGO_DEBUG=False
+        - POSTGRES_DB=marketplace
+        - POSTGRES_USER=dev
+        - POSTGRES_PASSWORD=dev
+        - POSTGRES_HOST=postgres
+        - POSTGRES_PORT=5432
+      command: gunicorn notification_service.wsgi:application --bind 0.0.0.0:8003
+      depends_on: [postgres, redis]
+      restart: unless-stopped
+      mem_limit: 512m
+      cpus: 0.5
+
   postgres:
     image: postgis/postgis:15-3.3
     ports: ["5432:5432"]
